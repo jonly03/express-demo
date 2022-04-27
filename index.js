@@ -3,8 +3,9 @@ const express = require("express");
 
 // create an express server from the express function above
 const server = express(); // this server is deaf AF. Can't hear ANYTHING. It's locked out of the world
+//
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 // Make the server listen on a port (on our computer)
 server.listen(PORT, () => {
