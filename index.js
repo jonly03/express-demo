@@ -1,11 +1,15 @@
 // require express
 const express = require("express");
+const cors = require("cors");
 
 // create an express server from the express function above
 const server = express(); // this server is deaf AF. Can't hear ANYTHING. It's locked out of the world
 
 // Tell our server how to process different payloads
 server.use(express.json());
+
+// Tell my server to let requests from browsers come through
+server.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
