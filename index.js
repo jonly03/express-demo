@@ -1,6 +1,9 @@
+require("dotenv").config();
+
 // require express
 const express = require("express");
 const cors = require("cors");
+const axios = require("axios");
 
 // create an express server from the express function above
 const server = express(); // this server is deaf AF. Can't hear ANYTHING. It's locked out of the world
@@ -145,12 +148,11 @@ server.get("/students/interest/:interest", (req, res) => {
 /*
   - destination name (REQUIRED)
   - location (REQUIRED)
-  - photo
   - description
 */
-server.post("/destinations", (req, res) => {
+server.post("/destinations", async (req, res) => {
   // ONLY grab what I need
-  const { destination, location, photo, description } = req.body;
+  const { destination, location, description } = req.body;
 
   // VALIDATE that I got what I expected (i.e destination & location are BOTH present and NOT empty strings)
   if (
@@ -164,11 +166,21 @@ server.post("/destinations", (req, res) => {
       .send({ error: "Destination AND location are BOTH required" });
   }
 
+  // Create the Unsplash APIURL with the API_KEY and the location & destination passed in as the query
+  const UnsplashApiUrl = `https://api.unsplash.com/search/photos?query=${destination} ${location}&client_id=${process.env.UNSPLASH_API_KEY}`;
+
+  // Use either Axios or node-fetch to get the photos
+  const { data } = await axios.get(UnsplashApiUrl);
+
+  // Get a random photo from data.results
+  const photos = data.results;
+  const randIdx = Math.floor(Math.random() * photos.length);
+
   // Create the new object to put in my DB
   const newDest = {
     destination,
     location,
-    photo: photo && photo.length !== 0 ? photo : "kakdjkajkdjkajkdj",
+    photo: photos[randIdx].urls.small,
     description: description ? description : "",
   };
 
