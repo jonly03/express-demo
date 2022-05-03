@@ -1,195 +1,116 @@
 require("dotenv").config();
 
-// require express
 const express = require("express");
 const cors = require("cors");
-const axios = require("axios");
+const ejs = require("ejs");
+
+// const { MongoClient, ObjectId } = require("mongodb");
+const { destinations } = require("./Models/destinations");
+
+// Routes
+const { studentsRouter } = require("./Routes/api-routes/students");
+const { destinationsRouter } = require("./Routes/api-routes/destinations");
 
 // create an express server from the express function above
 const server = express(); // this server is deaf AF. Can't hear ANYTHING. It's locked out of the world
 
 // Tell our server how to process different payloads
 server.use(express.json());
+server.use(express.urlencoded({ extended: true }));
+
+// Tell our server about where to find public files
+server.use(express.static("Public Files"));
+
+// Configure our server to use ejs as our templating engine
+server.set("view engine", "ejs");
+server.set("views", "./Views");
 
 // Tell my server to let requests from browsers come through
 server.use(cors());
 
 const PORT = process.env.PORT || 3000;
 
-// Make the server listen on a port (on our computer)
 server.listen(PORT, () => {
-  console.log("Server listening...");
+  console.log("Listening");
 });
 
-// CRUD
-// CREATE => POST
-// READ => GET
-// UPDATE => PUT
-// DELETE => DELETE
-
-const destinations = [];
-
-const students = {
-  dao: {
-    name: "Dao",
-    interests: ["tacos"],
-    city: "Sac Town",
-  },
-  nikko: {
-    name: "Nikko",
-    interests: ["bananas"],
-    city: "Detroit",
-  },
-  will: {
-    name: "Will",
-    interests: ["camarro", "frontier", "wrangler", "bananas"],
-    city: "Detroit",
-  },
-  mannie: {
-    name: "Mannie",
-    interests: ["soccer", "bananas"],
-    city: "Georgia",
-  },
-};
-
-// GET /students
-// ?name=STUDENT_NAME
-// ?interest
-// ?city
-// localhost:3000/students
-// localhost:3000/students?name=nikko
-// localhost:3000/students?city=detroit&interest=banana
-server.get("/students", (req, res) => {
-  const { name, interest, city } = req.query;
-
-  if (!name && !interest && !city) {
-    return res.send(students);
-  }
-
-  if (name) {
-    const student = students[name.toLowerCase()];
-
-    if (student) {
-      return res.send(student);
-    }
-
-    return res
-      .status(404)
-      .send({ error: `Student by the name of ${name} not found` });
-  }
-
-  let filteredStudents = Object.values(students);
-
-  if (interest) {
-    filteredStudents = filteredStudents.filter((student) =>
-      student.interests.includes(interest.toLowerCase())
-    );
-  }
-
-  if (city) {
-    filteredStudents = filteredStudents.filter(
-      (student) => student.city.toLowerCase() === city.toLowerCase()
-    );
-  }
-
-  return res.send(filteredStudents);
+server.get("/", (req, res) => {
+  res.render("index", { title: "Destination Page", destinations });
+  // res.sendFile(`${__dirname}/index.html`);
 });
 
-// GET /students/city/:myCity
-// USING NAMED ROUTE PARAMETERS
-// localhost:3000/students/city/detroit
-/*
-  {
-    myCity: detroit
-  }
-*/
+server.use("/students", studentsRouter);
+server.use("/destinations", destinationsRouter);
 
-server.get("/students/name/:name", (req, res) => {
-  const { name } = req.params;
+// // MONGODB CONNECTION
+// const client = new MongoClient(process.env.MONGODB_CONNECTION_URL);
 
-  if (name) {
-    const student = students[name.toLowerCase()];
+// client
+//   .connect()
+//   .then(async () => {
+//     // Make the server listen on a port (on our computer)
+//     server.listen(PORT, () => {
+//       console.log("Server listening...");
+//     });
 
-    if (student) {
-      return res.send(student);
-    }
+//     const db = client.db("express-demo");
+//     const students = db.collection("students");
 
-    return res
-      .status(404)
-      .send({ error: `Student by the name of ${name} not found` });
-  }
-});
-server.get("/students/city/:city", (req, res) => {
-  const { city } = req.params;
+//     students.insertOne({
+//       kajdkjakd: "kdjkajdkjakd",
+//       kajdkjakdj: 290,
+//       kjakdjkajkdj: "kdjfjheurhjbvnbd",
+//     });
 
-  if (city) {
-    const filteredStudents = Object.values(students).filter(
-      (student) => student.city.toLowerCase() === city.toLowerCase()
-    );
+//     const allStudents = await students.find().toArray();
+//     console.table(allStudents);
 
-    return res.send(filteredStudents);
-  }
-});
-server.get("/students/interest/:interest", (req, res) => {
-  const { interest } = req.params;
+//     const detroitBoys = await students
+//       .find({ city: "Detroit", interests: "bananas" })
+//       .toArray();
+//     console.table(detroitBoys);
 
-  if (interest) {
-    const filteredStudents = Object.values(students).filter((student) =>
-      student.interests.includes(interest.toLowerCase())
-    );
+//     await students.deleteOne({ _id: ObjectId("627052a04eb2229bb037074f") });
 
-    return res.send(filteredStudents);
-  }
-});
+//     await students.updateOne(
+//       { _id: ObjectId("627052b51845ebba7f561dc5") },
+//       {
+//         $set: {
+//           city: "Boston",
+//           interests: ["tacos", "bananas"],
+//         },
+//       }
+//     );
 
-// CREATE => POST
-// POST /destinations
-// What is a destination? What makes a destination record?
-/*
-  - destination name (REQUIRED)
-  - location (REQUIRED)
-  - description
-*/
-server.post("/destinations", async (req, res) => {
-  // ONLY grab what I need
-  const { destination, location, description } = req.body;
+//     const newStudents = await students.find().toArray();
+//     console.table(newStudents);
 
-  // VALIDATE that I got what I expected (i.e destination & location are BOTH present and NOT empty strings)
-  if (
-    !destination ||
-    !location ||
-    destination.length === 0 ||
-    location.length === 0
-  ) {
-    return res
-      .status(400)
-      .send({ error: "Destination AND location are BOTH required" });
-  }
+//     // const alotOfStudents = [
+//     //   {
+//     //     name: "Dao",
+//     //     interests: ["tacos"],
+//     //     city: "Sac Town",
+//     //   },
+//     //   {
+//     //     name: "Nikko",
+//     //     interests: ["bananas"],
+//     //     city: "Detroit",
+//     //   },
+//     //   {
+//     //     name: "Will",
+//     //     interests: ["camarro", "frontier", "wrangler", "bananas"],
+//     //     city: "Detroit",
+//     //   },
+//     //   {
+//     //     name: "Mannie",
+//     //     interests: ["soccer", "bananas"],
+//     //     city: "Georgia",
+//     //   },
+//     // ];
 
-  // Create the Unsplash APIURL with the API_KEY and the location & destination passed in as the query
-  const UnsplashApiUrl = `https://api.unsplash.com/search/photos?query=${destination} ${location}&client_id=${process.env.UNSPLASH_API_KEY}`;
+//     // students.insertMany(alotOfStudents);
 
-  // Use either Axios or node-fetch to get the photos
-  const { data } = await axios.get(UnsplashApiUrl);
-
-  // Get a random photo from data.results
-  const photos = data.results;
-  const randIdx = Math.floor(Math.random() * photos.length);
-
-  // Create the new object to put in my DB
-  const newDest = {
-    destination,
-    location,
-    photo: photos[randIdx].urls.small,
-    description: description ? description : "",
-  };
-
-  destinations.push(newDest);
-
-  res.redirect(303, "/destinations"); // => go to a GET /destinations
-});
-
-// GET /destinations
-server.get("/destinations", (req, res) => {
-  res.send(destinations);
-});
+//   })
+//   .catch((error) => {
+//     console.log(error);
+//   });
